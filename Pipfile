@@ -4,6 +4,21 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+pyspark = "*"
+pyspark-stubs = "==3.0.0.post3"
+pyspark-functions = "*"
+pyspark-patch = "*"
+pyspark-sugar = "*"
+pyspark-cli = "*"
+pyspark-config = "*"
+pysparklib = "*"
+pyspark-utilities = "*"
+pysparkplus = "*"
+pyspark-utils = "*"
+pyspark-util = "*"
+pyspark-types = "*"
+pysparkgateway = "*"
+pyspark-pandas = "*"
 
 [dev-packages]
 
