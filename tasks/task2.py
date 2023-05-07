@@ -4,10 +4,12 @@ import pyspark.sql.functions as f
 
 
 class TaskTwo:
-    def __init__(self, path=None, session=None):
+    def __init__(self, path=None, session=None, output_path=None):
         self.path = path
         self.session = session or self.start_session()
         self.input_data = self._read_path()
+        self.output_path = output_path
+        self.result = None
 
     def start_session(self):
         spark_session = None
@@ -43,5 +45,13 @@ class TaskTwo:
 
         return result
 
+    def write_results(self, file_name: str = "task2.csv"):
+        try:
+            self.result.write.option('encoding', 'Windows-1251').csv(self.output_path + '\\' + file_name, header=True, mode='overwrite')
+        except Exception as error:
+            print("Error! Can not write Results File of Task2")
+            print(error)
+
     def show_table(self, data=None):
-        data.select('primaryName', 'birthYear').show()
+        self.result = data.select('primaryName', 'birthYear')
+        self.result.show()

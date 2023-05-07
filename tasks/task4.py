@@ -3,11 +3,13 @@ from pyspark.sql import SparkSession
 
 
 class TaskFour:
-    def __init__(self, path=None,path1=None,path2=None, session=None):
+    def __init__(self, path=None, path1=None, path2=None, session=None, output_path=None):
         self.path = path
         self.path1 = path1
         self.path2 = path2
         self.session = session or self.start_session()
+        self.output_path = output_path
+        self.result = None
 
         self.input_data = self._read_path()
         self.input_data1 = self._read_path1()
@@ -60,9 +62,10 @@ class TaskFour:
     def get_data(self):
         result = None
         try:
-            result=self.input_data.join(self.input_data1, on='nconst', how='left'). \
+            result = self.input_data.join(self.input_data1, on='nconst', how='left'). \
                 join(self.input_data2, self.input_data1["tconst"] == self.input_data2["titleId"], "inner"). \
-                select(self.input_data['primaryName'], self.input_data1['characters'], self.input_data2["title"]).filter(
+                select(self.input_data['primaryName'], self.input_data1['characters'],
+                       self.input_data2["title"]).filter(
                 self.input_data1['category'] == 'actor')
         except Exception as error:
             print("Task 4 Error. Can not filter input data")
@@ -70,8 +73,13 @@ class TaskFour:
 
         return result
 
+    def write_results(self, file_name: str = "task4.csv"):
+        try:
+            self.result.write.option('encoding', 'Windows-1251').csv(self.output_path + '\\' + file_name, header=True, mode='overwrite')
+        except Exception as error:
+            print("Error! Can not write Results File of Task4")
+            print(error)
+
     def show_table(self, data=None):
-        data.show()
-
-
-
+        self.result = data
+        self.result.show()

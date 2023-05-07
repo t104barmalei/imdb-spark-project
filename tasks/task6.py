@@ -5,13 +5,14 @@ import pyspark.sql.functions as f
 
 
 class TaskSix:
-    def __init__(self, path=None,films_episode_df_path=None, session=None):
+    def __init__(self, path=None, films_episode_df_path=None, session=None, output_path=None):
         self.path = path
         self.films_episode_df_path = films_episode_df_path
         self.session = session or self.start_session()
         self.films_df = self._read_path()
         self.films_episode_df = self._read_path1()
-
+        self.output_path = output_path
+        self.result = None
 
     def start_session(self):
         spark_session = None
@@ -55,10 +56,10 @@ class TaskSix:
     def get_data(self):
         result = None
         try:
-            a = self.films_episode_df.filter(self.films_episode_df['episodeNumber'].isNotNull())
-            result = self.films_df.join(a, self.films_df['tconst'] == a['parentTconst'])\
-                .select(self.films_df['originalTitle'], a['episodeNumber']).groupBy('originalTitle')\
-                .agg(f.count('episodeNumber').alias('epNumber')).orderBy(['epCount'], ascending=False).limit(50)
+            sorted_episodes = self.films_episode_df.filter(self.films_episode_df['episodeNumber'].isNotNull())
+            result = self.films_df.join(sorted_episodes, self.films_df['tconst'] == sorted_episodes['parentTconst'])\
+                .select(self.films_df['originalTitle'], sorted_episodes['episodeNumber']).groupBy('originalTitle')\
+                .agg(f.count('episodeNumber').alias('epCount')).orderBy(['epCount'], ascending=False).limit(50)
 
         except Exception as error:
             print("Task 6 Error. Can not filter input data")
@@ -66,5 +67,13 @@ class TaskSix:
 
         return result
 
+    def write_results(self, file_name: str = "task6.csv"):
+        try:
+            self.result.write.option('encoding', 'Windows-1251').csv(self.output_path + '\\' + file_name, header=True, mode='overwrite')
+        except Exception as error:
+            print("Error! Can not write Results File of Task6")
+            print(error)
+
     def show_table(self, data=None):
-        data.show()
+        self.result = data
+        self.result.show()

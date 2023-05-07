@@ -2,16 +2,17 @@ from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
 
-
 class TaskFive:
-    def __init__(self, path=None,path1=None,path2=None, session=None):
+    def __init__(self, path=None, path1=None, path2=None, session=None, output_path=None):
         self.path = path
         self.path1 = path1
         self.path2 = path2
         self.session = session or self.start_session()
         self.films_df = self._read_path()
         self.films_adult_df = self._read_path1()
-        self.films_reiting_df = self._read_path2()
+        self.films_rating_df = self._read_path2()
+        self.output_path = output_path
+        self.result = None
 
     def start_session(self):
         spark_session = None
@@ -61,11 +62,11 @@ class TaskFive:
         result = None
         try:
             result = self.films_df.join(self.films_adult_df, self.films_df['titleId'] == self.films_adult_df['tconst']). \
-                join(self.films_reiting_df, self.films_adult_df['tconst'] == self.films_reiting_df['tconst']). \
-                select(self.films_df['titleId'], self.films_df['title'], self.films_df['region'], \
-                       self.films_adult_df['isAdult'], self.films_reiting_df['averageRating']). \
+                join(self.films_rating_df, self.films_adult_df['tconst'] == self.films_rating_df['tconst']). \
+                select(self.films_df['titleId'], self.films_df['title'], self.films_df['region'],
+                       self.films_adult_df['isAdult'], self.films_rating_df['averageRating']). \
                 filter(self.films_df['region'].isNotNull()).filter(self.films_adult_df['isAdult'] == True). \
-                sort(self.films_df['region'], self.films_reiting_df['averageRating'].desc()). \
+                sort(self.films_df['region'], self.films_rating_df['averageRating'].desc()). \
                 groupBy(self.films_df['region']).count().sort('count', ascending=False).limit(100)
 
         except Exception as error:
@@ -74,7 +75,13 @@ class TaskFive:
 
         return result
 
+    def write_results(self, file_name: str = "task5.csv"):
+        try:
+            self.result.write.option('encoding', 'Windows-1251').csv(self.output_path + '\\' + file_name, header=True, mode='overwrite')
+        except Exception as error:
+            print("Error! Can not write Results File of Task5")
+            print(error)
+
     def show_table(self, data=None):
-        data.show()
-
-
+        self.result = data
+        self.result.show()
