@@ -1,8 +1,7 @@
 from pyspark import SparkConf
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Window
 import pyspark.sql.types as t
 import pyspark.sql.functions as f
-import math
 
 
 class TaskSeven:
@@ -74,33 +73,13 @@ class TaskSeven:
                 sort(self.films_df['startYear'], self.films_rating_df['averageRating'].desc()).\
                 filter(f.col('startYear').isNotNull())
 
-            result_df_max = result_df.select(f.max(result_df['startYear']))
-            result_df_min = result_df.select(f.min(result_df['startYear']))
+            window = Window.partitionBy(f.col('startYear')[0:3]).orderBy(f.col('averageRating').desc())
 
-            result_df_max = (math.trunc(result_df_max.head()[0] / 10) + 1) * 10
-            result_df_min = math.trunc(result_df_min.head()[0] / 10) * 10
+            positions = [*range(1, 10 + 1)]
 
-            step = 10
-            res_list = []
-            for decade in range(result_df_min, result_df_max + 1, step):
-                tmp = result_df.filter(f.col('startYear') >= decade).filter(f.col('startYear') < decade + step). \
-                    limit(10)
-
-                res_list.append(
-                    tmp.withColumnRenamed('startYear', 'Decade').sort(f.col('averageRating').desc())
-                    .withColumn('Decade', f.lit(f"{decade}-{decade + step}"))
-                )
-
-            res_cnt = 0
-            for films_decades in res_list:
-                res_cnt += 1
-                current_value = films_decades
-                if res_cnt == 1:
-                    result = current_value
-                    continue
-
-                result = result.union(current_value)
-
+            result = result_df.withColumn('num_in_Decade', f.row_number().over(window)) \
+                .withColumn('Decade', f.format_string('%.3s0th', f.col('startYear').cast(t.StringType()))) \
+                .where(f.col('num_in_Decade').isin(*positions))
         except Exception as error:
             print("Task 7 Error. Can not filter input data")
             print(error)

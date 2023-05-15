@@ -1,5 +1,5 @@
 from pyspark import SparkConf
-from pyspark.sql import SparkSession
+from pyspark.sql import SparkSession, Window
 import pyspark.sql.types as t
 import pyspark.sql.functions as f
 
@@ -75,29 +75,12 @@ class TaskEight:
 
             explode_df = result_df.withColumn('genres', f.split(result_df['genres'], ',').getItem(0))
 
-            #Handler
-            result_df_pd = explode_df.toPandas()
-            genres_unique = list(set(result_df_pd['genres'].tolist()))
-            genres_all = list()
-            for str_full in genres_unique:
-                lst_tmp = str_full.split(',')
-                genres_all = genres_all + lst_tmp
-            genres_all = list(set(genres_all))
+            window = Window.partitionBy('genres').orderBy(f.col('averageRating').desc())
 
-            pdf_set = list()
-            for genre in genres_all:
-                pdf = explode_df.filter(f.col('genres').like('%' + genre + '%')).\
-                    sort(f.col('averageRating').desc()).limit(10)
-                pdf_set.append(pdf)
+            positions = [*range(1, 10 + 1)]
 
-            res_cnt = 0
-            for i in pdf_set:
-                res_cnt += 1
-                a = i
-                if res_cnt == 1:
-                    result = a
-                    continue
-                result = result.union(a)
+            result = explode_df.withColumn('film_Number', f.row_number().over(window)) \
+                .where(f.col('film_Number').isin(*positions))
 
         except Exception as error:
             print("Task 8 Error. Can not filter input data")
